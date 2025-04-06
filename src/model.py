@@ -9,6 +9,7 @@ from tensorflow import keras
 from keras import layers
 import numpy as np
 import matplotlib.pyplot as plt
+from keras import activations
 
 
 TEAMS: dict[Team] = {}
@@ -63,7 +64,7 @@ def trainModel(model: keras.Model, xtrain, ytrain, xval, yval, verbose: bool=Fal
         xtrain,
         ytrain,
         batch_size=1000,
-        epochs=100,
+        epochs=200,
         validation_data=(xval, yval)
     )
     if verbose:
@@ -79,9 +80,9 @@ def lossMetric(y_true, y_pred):
 
 def makeModel():
     inputs = keras.Input(shape=(2,4,), dtype=tf.float32)
-    layer1 = layers.Dense(4, dtype=tf.float32)(inputs)
-    layer2 = layers.Dense(2, dtype=tf.float32)(layer1)
-    output = layers.Dense(1, dtype=tf.float32)(layer2)
+    layer1 = layers.Dense(4)(inputs) # gelu worked really well
+    layer2 = layers.Conv1D(2, 1)(layer1)
+    output = layers.Dense(1)(layer2)
     model = keras.Model(inputs=inputs, outputs=output, name="mmpredictor")
     model.compile(
         loss=lossMetric,
@@ -101,8 +102,8 @@ def main(train=True):
 
     xtrain=tf.Variable(np.asarray(matrices[:EVAL_SIZE]).astype("float32"), dtype="float32")
     xval=tf.Variable(np.asarray(matrices[EVAL_SIZE:]).astype("float32"), dtype="float32")
-    ytrain=tf.Variable(np.asarray(results[:EVAL_SIZE]).astype("float32"), dtype="float32")
-    yval=tf.Variable(np.asarray(results[EVAL_SIZE:]).astype("float32"), dtype="float32")
+    ytrain=tf.Variable(np.asarray(results[:EVAL_SIZE]).astype("int32"), dtype="int32")
+    yval=tf.Variable(np.asarray(results[EVAL_SIZE:]).astype("int32"), dtype="int32")
 
     if(path.exists(r"./src/mmpredictor.keras")):
         model = keras.models.load_model(r"./src/mmpredictor.keras")
@@ -110,13 +111,13 @@ def main(train=True):
         model: keras.Model = makeModel()
 
     if train:
-        history = trainModel(model, xtrain, ytrain, xval, yval)
+        history = trainModel(model, xtrain, ytrain, xval, yval, verbose=True)
         plt.plot(history.history['loss'], label = "Training Loss")
         plt.show()
 
     model.save(r"./src/mmpredictor.keras")
 
-    duke_v_houston = tf.constant(np.asarray([[teams["Duke"].asList(), teams["Houston"].asList()]]), dtype="float32")
+    duke_v_houston = tf.constant(np.asarray([[teams["Auburn"].asList(), teams["Florida"].asList()]]), dtype="float32")
     print(model.predict(duke_v_houston))
 
 
